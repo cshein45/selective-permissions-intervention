@@ -44,22 +44,11 @@ This intent is to block access to APIs that reveal personal information about th
 When the intervention is triggered, Chrome will perform the following three actions simultaneously:
 
 1. **Deny Permission**: The API request will be automatically denied. For promise-based APIs, the promise will be rejected with a `DOMException` named `'NotAllowedError'`.
-2. **Console Warning**: A warning message will be printed to the DevTools console to inform developers. For example:
-```javascript
-[Intervention] Access to the Geolocation API was blocked because it was initiated by an ad script.
-
-JavaScript stack:
-  at callGeolocation (https://adtech.example/adscript.js:1:24)
-  at loadAds (https://publisher.example/main.js:123:12)
-
-Matched filterset rule:
-  ||adtech.example^
-
-```
-3. **Send Report**: An intervention report will be sent via the **Reporting API** to any registered reporting endpoints for the frame that initiated the call. This allows site owners to monitor the impact of the intervention on their properties. The fields of the report will look similar to the example console warning.
+2. **Console Issue**: A new console issue will be generated which shows the API that was blocked, the JavaScript stack at the time that it was blocked, and why that script was considered ad related by the the browser.
+4. **Send Report**: An intervention report will be sent via the **Reporting API** to any registered reporting endpoints for the frame that initiated the call. This allows site owners to monitor the impact of the intervention on their properties. The fields of the report will look similar to the example console warning.
 
 #### Proposed Specification
-Here is the [proposed patch](https://github.com/w3c/webappsec-permissions-policy/pull/572) to Permissions Policy.
+Here is the [proposed patch](https://github.com/w3c/webappsec-permissions-policy/pull/572) to Permissions Policy which allows the UA to deny permission policy requests for intervention purposes.
 
 ## Security and Privacy Considerations
 
@@ -79,7 +68,7 @@ This change will affect ads that attempt to use privacy sensitive APIs for featu
 
 
 
-* **DevTools Console**: The easiest way to check for this intervention during development is to watch for the warning messages in the Chrome DevTools console.
+* **DevTools Console**: The easiest way to check for this intervention during development is to watch for the warning messages in the Chrome DevTools issues pane.
 * **Reporting API**: For production monitoring, site owners should configure a reporting endpoint to receive `intervention` reports. The report body will look similar to this: \
 ```javascript
 {
@@ -102,10 +91,9 @@ This change will affect ads that attempt to use privacy sensitive APIs for featu
 
 Functionality requiring sensitive APIs should be **initiated by the publisher's non-ad scripts**.
 
-It’s possible that ads on the page have overridden APIs (such as geolocation) to monitor or track their usage or returned values. In such cases, even if a first-party, non-ad-related script triggered the API call, ad-tech script might still be present on the JavaScript stack at the time of the call. This monitoring code should be removed from your page.
+If an ad script requires user location, and the publisher consents, the publisher should make the geolocation call and pass that data to the ad script. 
 
-If an ad requires user location, for example, it should communicate that need to the publisher's page script (e.g., via `postMessage`). The page script can then present the user with a permission prompt. If the user consents, the page script can perform the API call and pass the resulting data back to the ad. The key is that the API call itself must not originate from the ad script's stack.
-
+If the script in question is not an ad script (e.g., the call would occur even with an ad blocker enabled) then please file an issue with the browser.
 
 ---
 
